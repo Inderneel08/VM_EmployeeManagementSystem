@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <style>
+      .fa{
+        cursor: pointer;
+      }
+
+      .alert-danger{
+        display: flex;
+        justify-content: center;
+      }
+
+    </style>
+
+</head>
+<body>
+
+    <!-- Add this code at an appropriate location in your HTML, such as after the form -->
+    <div th:if="${errorMessage}">
+      <div class="alert alert-danger" role="alert">
+          <h3 th:text="${errorMessage}" id="errorMessage"></h3>
+      </div>
+    </div>
+
+    <div class="container">
+        <br>
+        <h2>Login</h2>
+        <form th:action="@{/login}" class="form-horizontal" method="post" th:object="${login}" id="formSubmit">
+          
+            <br>
+          <div class="form-group">
+            <label class="control-label col-sm-2" for="username">Username:</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control" id="username" placeholder="Enter username" name="username" required>
+            </div>
+          </div>
+          <br>
+          <div class="form-group" id="forPassword">
+            <label class="control-label col-sm-2" for="password">Password:</label>
+            <div class="col-sm-10">          
+              <input type="password" class="form-control" id="password" placeholder="Enter password" name="password" required>
+            </div>
+            <i class="fa fa-eye" id="eye" style="position: relative; top: -25px; left: 1125px; font-size: larger;" onclick="togglePasswordVisibility()"></i>
+          </div>
+          <br>
+          <div class="form-group">        
+            <div class="col-sm-offset-6 col-sm-10">
+              <button type="submit" class="btn btn-success" id="submitButton">
+                Submit
+              </button>
+            </div>
+            
+            <br>
+            <br>
+            <br>
+
+            <div class="container">
+              <div class="row">
+                <div class="col-sm-6">
+                  <a class="btn btn-primary" th:href="@{/oauth2/authorization/google}">Login with Google</a>
+                </div>
+
+                <!-- <div class="col-sm-6">
+                  <a class="btn btn-primary" href="/oauth2/authorization/google_registration">Register with Google</a>
+                </div> -->
+              </div>
+            </div>
+
+          </div>
+
+        </form>
+      </div>
+
+      <script>
+
+        function togglePasswordVisibility()
+        { 
+          var current_eye = document.getElementById('eye');
+
+          var new_eye = document.createElement('i');
+
+          current_eye.remove();
+
+          if(document.getElementById('password').type==='password'){
+            new_eye.className = "fa fa-eye-slash";
+            document.getElementById('password').type='text';
+          }
+          else{
+            new_eye.className = "fa fa-eye";
+            document.getElementById('password').type='password';
+          }
+
+          new_eye.style.position = 'relative';
+
+          new_eye.style.top = '-25px';
+
+          new_eye.style.left = '1125px';
+
+          new_eye.style.fontSize = 'larger';
+
+          new_eye.id='eye';
+          
+          new_eye.addEventListener('click',togglePasswordVisibility);
+          
+          document.getElementById('forPassword').appendChild(new_eye);
+        }
+
+      </script>
+      
+</body>
+</html>

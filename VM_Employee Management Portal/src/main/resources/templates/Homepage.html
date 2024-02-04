@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homepage</title>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <link href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" type="text/css" rel="stylesheet" />
+    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@10.16.6/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.16.6/dist/sweetalert2.min.js"></script>    
+    
+
+    <style>
+        .sidebar {
+            margin: 0;
+            padding: 0;
+            width: 20%;
+            background-color: #f1f1f1;
+            position: fixed;
+            height: 100%;
+            overflow: auto;
+        }
+
+        .sidebar a {
+            display: block;
+            color: black;
+            padding: 16px;
+            text-decoration: none;
+        }
+        
+        .sidebar a.active {
+            background-color: #04AA6D;
+            color: white;
+        }
+
+        .sidebar a:hover:not(.active) {
+            background-color: #555;
+            color: white;
+        }
+
+        .content {
+            margin-left: 20%;
+            padding: 1px 1px;
+        }
+
+
+    </style>
+
+
+</head>
+<body>
+    <!-- <h1> Hello <span th:text="${username}"></span></h1> -->
+
+    <div class="sidebar">
+        
+        <a class="active" th:href="@{/home}">Home</a>
+
+        <a th:href="@{/create_user}" th:if="${#authorization.expression('hasAuthority(''ADMIN'')')}">Create a new user</a>
+
+        <a th:href="@{/create_vm}" th:if="${#authorization.expression('hasAuthority(''ADMIN'')')}">Create a new vm</a>
+
+        <a style="cursor: pointer;" onclick="document.getElementById('logoutForm').submit();"> Logout </a>
+
+        <form th:action="@{/logout}" method="post" id="logoutForm">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        </form>
+
+    </div>
+
+    <div class="content" style="display: flex; flex-direction: row-reverse; justify-content:space-between;">
+        
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+                <span th:text="${#authentication.principal.username}"></span>                
+            </button>
+
+            <ul class="dropdown-menu" style="margin-left: -75px;">
+                <li> <a th:href="@{/myDetails}"> Change Username </a> </li>
+                <li> <a th:href="@{/changePassword}"> Change Password </a> </li>
+            </ul>
+
+        </div>
+        
+
+        <div class="btn-group" style="margin-left: 35%;" th:if="${#authorization.expression('hasAuthority(''ADMIN'')')}">
+            <a class="btn btn-primary" id="list_users">List Of Users</a>
+            <a class="btn btn-primary" id="list_vms">List Of VM's</a>
+        </div>
+        
+    </div>
+
+    <div class="right-content" style="margin-top: 5%; margin-left: 20%;">
+        <div id="showTextMessage" style="margin-left: 40%;">
+        </div>
+
+        <br>
+        <br>
+
+        <table class="Data-Table">
+            <thead>
+            </thead>
+            <tbody>
+    
+            </tbody>
+        </table>
+    </div>
+
+
+    <script>
+
+    $(document).ready(function(){
+
+        var listOfUsers;
+
+        var AJaxForListUsers = $.ajax({
+            url: '/getUsers',
+            method: 'GET',
+            dataType: 'json',
+            success:function(){
+                collectLists();
+            }
+        });
+
+        function collectLists()
+        {
+            listOfUsers = AJaxForListUsers.responseJSON;
+        }
+
+
+        $('#list_users').on('click',function(){
+
+            var isDataTable = $.fn.DataTable.isDataTable('.Data-Table');
+
+            if(isDataTable){
+                $(".Data-Table").dataTable().fnDestroy();
+                $(".Data-Table thead").empty();
+            }
+
+            create_list_ofUsers();
+        });
+
+        function create_list_ofUsers()
+        {
+            $.ajax({
+                url: '/getUsers',
+                method: 'GET',
+                dataType: 'json',
+                success: function(data){
+
+                    $('.Data-Table').DataTable({
+                        data: data,
+                        columns: [
+                            {data: null, render: function(data,type,row,meta) {return meta.row + 1;}, className: 'Row Number'},
+                            {data: 'username', name:'Username'},
+                            {data: 'email', name:'Email'},
+                            {data: 'role', name:'Role'},
+                            {data: 'status', name: 'Status'}
+                        ],
+
+                        columnDefs: [
+                            {
+                                targets:[3],
+                                data: 'role',
+                                name: 'role',
+
+                                render: function(data,type,row){
+
+                                    if(data==='ADMIN'){
+                                        if(row.status===0){
+                                            return '<select class="role-dropdown" disabled> <option value="ADMIN" selected> ADMIN </option> <option value="USER"> USER </option> </select>';
+                                        }
+
+                                        return '<select class="role-dropdown"> <option value="ADMIN" selected> ADMIN </option> <option value="USER"> USER </option> </select>';
+                                    }
+                                    else{
+                                        if(row.status===0){
+                                            return '<select class="role-dropdown" disabled> <option value="ADMIN"> ADMIN </option> <option value="USER" selected> USER </option> </select>';
+                                        }
+
+                                        return '<select class="role-dropdown"> <option value="ADMIN"> ADMIN </option> <option value="USER" selected> USER </option> </select>';
+                                    }
+                                }
+                            },
+
+                            {
+                                targets:[4],
+                                data: 'status',
+                                name: 'Status',
+                                render: function(data,type,row){
+                                    if(data==1){
+                                        return '<select class="status-dropdown"><option value="1" selected>ACTIVE</option> <option value="0">INACTIVE</option> </select>';
+                                    }
+                                    else{
+                                        return '<select class="status-dropdown"><option value="1">ACTIVE</option> <option value="0" selected>INACTIVE</option> </select>';
+                                    }
+                                }
+                            }
+                        ],
+                    });
+
+                    var headerRow = $('<tr>');
+
+                    var headers = ["Row Number","Username","Email","Role","Status"];
+
+                    headers.forEach(function(header){
+                        headerRow.append('<th>'+header+'</th>');
+                    });
+
+                    $('.Data-Table thead').append(headerRow);
+
+                    $('.Data-Table').on('change','.role-dropdown,.status-dropdown',function(){
+                        var cell = $(this).closest('td');
+                        
+                        var columnIndx = cell.index();
+
+                        var rowData = $('.Data-Table').DataTable().row($(this).closest('tr')).data();
+
+                        var newValue = $(this).val();
+
+                        var csrfToken = $("meta[name='_csrf']").attr("content");
+
+                        var csrfHeader = $("meta[name='_csrf_header']").attr("content");
+
+                        if(columnIndx === 3){
+
+                            $.ajax({
+                                url: '/updateUserRole',
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    [csrfHeader]: csrfToken
+                                },
+                                data: JSON.stringify({username: rowData.username, newRole: newValue}),
+                                success: function(response) {
+
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response,
+                                    }).then((result)=>{
+                                        reloadDataTable('users');
+                                    });
+
+                                    // create_list_ofUsers();
+                                },
+
+                                error: function(error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: "Error updating role",
+                                    });
+                                }
+                            });
+
+                        } else if(columnIndx===4){
+
+                            $.ajax({
+                                url: '/updateUserStatus',
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    [csrfHeader]: csrfToken
+                                },
+                                data: JSON.stringify({username: rowData.username, newStatus: newValue}),
+                                success: function(response) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response,
+                                    }).then((result) => {
+                                        reloadDataTable('users');
+                                    });
+
+                                    // create_list_ofUsers();
+                                },
+
+                                error: function(error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: "Error updating status",
+                                    });
+                                }
+                            });
+                        }
+
+                    });
+                },
+                
+                error: function(error) {
+                    console.error("Error fetching data");
+                }
+            });
+        }
+
+
+        $('#list_vms').on('click',function(){
+            var isDataTable = $.fn.DataTable.isDataTable('.Data-Table');
+
+            if(isDataTable){
+                $(".Data-Table").dataTable().fnDestroy();
+                $(".Data-Table thead").empty();
+            }
+
+            create_listOfVmS();
+        });
+
+        function create_listOfVmS()
+        {
+            $.ajax({
+                url: '/getVMS',
+                method: 'GET',
+                dataType: 'json',
+
+                success: function(data){
+
+                    $('.Data-Table').DataTable({
+                        data: data,
+                        columns: [
+                            {data: null, render: function(data,type,row,meta) {return meta.row + 1;}, className: 'Row Number'},
+                            {data: 'assigned_to', name: 'Assigned To'},
+                            {data: 'machine_name', name: 'Machine Name'},
+                            {data: 'date_created', name: 'Date Created'},
+                            {data: 'status', name: 'Status'},
+                            {data: null, name: 'History',
+                                
+                                render: function(data,type,row){
+                                    return '<button type="button" class="btn btn-primary history-button">Check History</button>';
+                                }
+                            },
+                        ],
+
+                        columnDefs: [
+                            {
+                                targets: [1],
+                                data: 'assigned_to',
+                                name: 'Assigned To',
+                                
+
+                                render: function(data,type,row){
+                                    var dropdownHtml;
+
+                                    if(row.status==1){
+                                        dropdownHtml='<select class="assign-dropdown" id="assign-select-dropdown">';
+                                    }
+                                    else{
+                                        dropdownHtml='<select class="assign-dropdown" id="assign-select-dropdown" disabled>';
+                                    }
+
+
+                                    if(data===null){
+                                        dropdownHtml+='<option value="" selected>'+ '-----Select-----' +'</option>';
+                                        
+                                        listOfUsers.forEach((users)=>{
+                                            dropdownHtml+= '<option value="'+ users.username + '">' + users.username + '</option>';
+                                        });
+                                    }
+                                    else{
+                                        dropdownHtml+='<option value="">'+ '-----Select-----' +'</option>';
+
+                                        listOfUsers.forEach((users)=>{
+                                            if(data===users.username){
+                                                dropdownHtml+= '<option value="'+ users.username + '" selected>' + users.username + '</option>';
+                                            }
+                                            else{
+                                                dropdownHtml+= '<option value="'+ users.username + '">' + users.username + '</option>';
+                                            }
+                                        });
+                                    }
+
+                                    dropdownHtml+='</select>';
+
+                                    return(dropdownHtml);
+                                }
+                            },
+
+                            {
+                                targets: [3],
+                                data: 'date_created',
+                                name: 'Date Created',
+
+                                render: function(data,type,row){
+                                    var formattedDate = new Date(data).toLocaleDateString();
+                                    
+                                    return formattedDate;
+                                }
+                            },
+
+                            {
+                                targets: [4],
+                                data: 'status',
+                                name: 'Status',
+
+                                render: function(data,type,row){
+                                    var dropdownHtml = '<select class="status-dropdown" id="status-select-dropdown">';
+
+                                    if(data==0){
+                                        dropdownHtml+= '<option value="0" selected>' + 'INACTIVE' + '</option>';
+                                        dropdownHtml+= '<option value="1">' + 'ACTIVE' + '</option>';
+                                    }
+                                    else{
+                                        dropdownHtml+= '<option value="1" selected>' + 'ACTIVE' + '</option>';
+                                        dropdownHtml+= '<option value="0">' + 'INACTIVE' + '</option>';
+                                    }
+
+                                    dropdownHtml+='</select>';
+                                    
+                                    return(dropdownHtml);
+                                }
+                            }
+                        ],
+                    });
+
+                    var headerRow = $('<tr>');
+
+                    var headers = ["Row Number","Assigned To","Machine Name","Date Created","Status","History"];
+
+                    headers.forEach(function(header){
+                        headerRow.append('<th>'+header+'</th>');
+                    });
+
+                    $('.Data-Table thead').append(headerRow);
+                },
+                error: function(error) {
+                    console.error("Error fetching data");
+                }
+            });
+
+            $('.Data-Table').on('change','.assign-dropdown,.status-dropdown',function(){
+                var cell = $(this).closest('td');
+
+                var columnIndx = cell.index();
+
+                var rowData = $('.Data-Table').DataTable().row($(this).closest('tr')).data();
+
+                var newValue = $(this).val();
+
+                var csrfToken = $("meta[name='_csrf']").attr("content");
+
+                var csrfHeader = $("meta[name='_csrf_header']").attr("content");
+
+                if(columnIndx === 4){
+
+                    $.ajax({
+                        url: '/updateVMStatus',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            [csrfHeader]: csrfToken
+                        },
+                        data: JSON.stringify({id: rowData.id, newStatus: newValue}),
+                        success: function(response) {
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: response,
+                            }).then((result)=>{
+                                reloadDataTable('vms');
+                            });
+                        },
+
+                        error: function(error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: "Error updating status",
+                            });
+                        }
+                    });
+
+                } else if(columnIndx === 1){
+                    console.log(columnIndx);
+                }
+
+
+            });
+        }
+
+        function reloadDataTable(type) {
+            $('.Data-Table').DataTable().clear().destroy();
+            $('.Data-Table thead').empty();
+
+            if(type==='users'){
+                create_list_ofUsers();
+            }
+            
+            if(type==='vms'){
+                create_listOfVmS();
+            }
+        }
+
+    });
+
+
+    </script>
+
+</body>
+</html>
